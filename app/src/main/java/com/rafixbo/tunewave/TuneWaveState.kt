@@ -1,5 +1,6 @@
 package com.rafixbo.tunewave
 
+import com.rafixbo.tunewave.crash.CrashHandler
 import com.rafixbo.tunewave.data.LocalStore
 import com.rafixbo.tunewave.data.LyricsRepository
 import com.rafixbo.tunewave.data.YouTubeRepository
