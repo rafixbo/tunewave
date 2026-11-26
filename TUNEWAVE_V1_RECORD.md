@@ -1,12 +1,42 @@
 # TuneWave v1 — Build Record
 
-**Date:** 2026-11-26, delivered ~12:50 Dhaka
-**App:** TuneWave 1.0.0+1 · `com.rafixbo.tunewave` · versionCode 1
-**Repo:** https://github.com/rafixbo/tunewave (public) · HEAD `9426c1e` (branch `main`)
-**APK:** `~/workspace/your_files/tunewave-v1.apk` — 17,442,869 B, SHA-256 `1a073dbe831bf49189f9f3b6f5e5ef21665fdcea3790c7d1f80981891414b57c`, signed (fresh CI debug keystore, cert SHA-256 `f170a7716c1e4cb3e159ff959500aef6ef1769d99620de3b5b3ba150ebb67ff7`), CI run 45770343664 SUCCESS
-**Source zip:** `~/workspace/your_files/tunewave-v1-source.zip` (rebuilt from HEAD at delivery)
+**Date:** 2026-11-26, v1 delivered ~12:50, v2 delivered ~13:12 Dhaka
+**App:** TuneWave 1.0.0+2 · `com.rafixbo.tunewave` · versionCode 2
+**Repo:** https://github.com/rafixbo/tunewave (public) · HEAD `e78331c` (branch `main`)
+**APK (v2):** `~/workspace/your_files/tunewave-v2.apk` — 17,442,869 B, SHA-256 `efd994b60f3e6d1c8e733ba4556c343f2aedd6f849bec194abb8b08a47dbc46f`, signed (fresh CI debug keystore), CI run 45773036508 SUCCESS
+**APK (v1):** `~/workspace/your_files/tunewave-v1.apk` — 17,442,869 B, SHA-256 `1a073dbe831bf49189f9f3b6f5e5ef21665fdcea3790c7d1f80981891414b57c`, CI run 45770343664 SUCCESS
+**Source zip (v2):** `~/workspace/your_files/tunewave-v2-source.zip` (rebuilt from HEAD at delivery)
 
-## Status: DELIVERED — APK BUILT, SIGNED, VERIFIED, SENT TO RAFI
+## Status: v1.0.0+2 DELIVERED — CRASH CATCHER ADDED (v1 crashed on open on Rafi's phone)
+
+v1 crashed when opened on Rafi's phone (no stack trace available — the
+reason the catcher exists). v2 adds CrashHandler everywhere (see below)
+and guards the startup path. CI run 45773036508 green (3m20s). APK verified:
+apksigner "Verifies" (v2+v3), aapt2 package `com.rafixbo.tunewave` vCode 2
+vName 1.0.0+2 minSdk 24 targetSdk 36. **Rafi must UNINSTALL v1 before
+installing v2** — the debug cert changes every CI build. Bot delivery:
+intro + APK + source zip via @shikhorobot (send_tunewave_v2.py).
+
+## v2 — crash catcher (commit 747068b + import fix e78331c)
+- NEW `crash/CrashHandler.kt`: global `Thread.setDefaultUncaughtExceptionHandler`
+  installed FIRST in TuneWaveApp.onCreate; writes timestamped logs with app
+  version, Android version, device model + full stack trace to app-private
+  `files/crash-logs/` (last 10 kept), then chains to the system default
+  handler (normal crash dialog still shows). `logCaught(tag, t)` for caught
+  errors; `coroutineHandler` on every app CoroutineScope.
+- Wired in EVERYWHERE: TuneWaveApp (init guarded — NewPipe init failure no
+  longer kills open), MainActivity (player connect + notification permission
+  guarded), PlayerManager scope + connect() + PlayerService.onCreate,
+  TuneWaveState scope.
+- Settings → Crash logs: count, View latest (dialog), Share (text intent),
+  Clear. This is how the next crash report reaches the developer.
+- v2 build failed once first (run 45772661749): missing CrashHandler import
+  in TuneWaveState — one-line fix (e78331c), then green.
+- Code review before building found NO single certain cause: PlayerService
+  exists (declared in PlayerManager.kt, present in dex), manifest/service/
+  theme all check out, LocalStore.readList already self-heals corrupt JSON,
+  trending()/loadHome() catch network errors. The catcher will capture the
+  real stack trace on the phone.
 
 CI run 45770343664 green (4m40s). APK verified on this VM: apksigner
 "Verifies" (v2+v3 schemes), aapt2 badging package `com.rafixbo.tunewave`
