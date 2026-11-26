@@ -2,9 +2,12 @@ name: Build TuneWave APK
 
 # TuneWave v1 — Kotlin / Jetpack Compose / Material 3 Expressive.
 # Builds the RELEASE APK on GitHub-hosted runners (primary build route).
-# No keystore is committed: v1 ships the unsigned release APK as the
-# CI artifact (assembleRelease without a signingConfig). No secrets are
-# needed for this build — there is no backend, no API key, no login.
+# No keystore is committed, ever: CI generates a fresh debug keystore
+# each run and signs the APK with it (an UNSIGNED APK cannot be
+# installed on Android at all). The cert therefore changes on every
+# build — uninstall the previous build before installing a new one.
+# No secrets are needed for this build — there is no backend, no API
+# key, no login.
 on:
   push:
     branches: [main]
@@ -49,9 +52,23 @@ jobs:
       - name: Build release APK
         run: gradle :app:assembleRelease --stacktrace
 
+      - name: Sign APK with fresh debug keystore
+        run: |
+          keytool -genkeypair -v -keystore /tmp/tunewave-debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=TuneWave Debug,O=TuneWave,C=BD"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
+            --ks /tmp/tunewave-debug.keystore --ks-pass pass:android \
+            --key-pass pass:android \
+            --out app/build/outputs/apk/release/app-release.apk \
+            app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose \
+            app/build/outputs/apk/release/app-release.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: tunewave-v1-apk
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
