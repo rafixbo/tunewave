@@ -27,6 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -167,8 +168,7 @@ object PlayerManager {
             try {
                 val quality = runCatching {
                     // Read the latest stream-quality setting synchronously-ish.
-                    kotlinx.coroutines.flow.first(store?.streamQuality
-                        ?: kotlinx.coroutines.flow.flowOf(AudioQuality.HIGH))
+                    store?.streamQuality?.first() ?: AudioQuality.HIGH
                 }.getOrElse { AudioQuality.HIGH }
                 val startIndex = queue.indexOfFirst { it.videoId == song.videoId }.coerceAtLeast(0)
                 val items = queue.map { s ->

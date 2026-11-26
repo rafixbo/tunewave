@@ -136,7 +136,10 @@ class YouTubeRepository {
             extractor.fetchPage()
             val title = runCatching { extractor.name }.getOrElse { song.title }
             val artist = runCatching { extractor.uploaderName }.getOrElse { song.artist }
-            val thumb = runCatching { extractor.thumbnailUrl }.getOrElse { song.thumbnailUrl }
+            val thumb = runCatching {
+                extractor.thumbnails.maxByOrNull { it.height }?.url
+                    ?: extractor.thumbnails.lastOrNull()?.url
+            }.getOrNull() ?: song.thumbnailUrl
             val duration = runCatching { extractor.length }.getOrElse { song.durationSec }
             val streams: List<AudioStream> = runCatching { extractor.audioStreams }.getOrElse { emptyList() }
             val picked = pickStream(streams, quality) ?: return@withContext null

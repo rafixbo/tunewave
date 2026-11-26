@@ -77,6 +77,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3:1.3.2")
+    // Material 3 Expressive theme is public only in the expressive
+    // artifact — material3 1.3.2's own MaterialExpressiveTheme is internal.
+    implementation("androidx.compose.material3:material3-expressive:1.0.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.9.0")
 
