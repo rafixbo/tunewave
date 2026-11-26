@@ -90,26 +90,23 @@ class YouTubeRepository {
     }
 
     /**
-     * Search — YouTube JSON (Innertube) FIRST, web HTML second.
-     * The JSON path is music.youtube.com/youtubei/v1/search with the
-     * WEB_REMIX client (no API key, no HTML scraping): it returns real
-     * songs and works even when the web results page comes back empty
-     * or blocked in the user's region. Verified live 2026-11-26: a
-     * "saiyaraa" query returned real songs (Saiyaara — Faheem Abdullah).
+     * Search — our own YouTube Music JSON parser FIRST, web HTML second.
+     * NewPipe's music extractor is NOT used: on Rafi's phone it threw
+     * `ParsingException: Unable to get contents.tabbedSearchResultsRenderer.tabs`
+     * (v1.0.0+3 log) — the JSON YouTube served the phone had no such
+     * path. Our parser walks the whole JSON tree and finds the songs
+     * wherever they are, so no single container path can break search.
+     * Parser logic verified against a real response (20 songs, titles,
+     * artists, durations, thumbnails all correct).
      */
     suspend fun search(query: String): List<Song> = withContext(Dispatchers.IO) {
         ensureInit()
-        // 1) YouTube Music JSON search (Innertube) — primary path.
-        // The "music_songs" content filter routes to YoutubeMusicSearchExtractor.
-        val music = runCatching {
-            val extractor = service.getSearchExtractor(query, listOf("music_songs"), "")
-            extractor.fetchPage()
-            extractor.initialPage.items.mapNotNull { it.toSong() }
+        // 1) YouTube Music JSON (Innertube) — our own tolerant parser.
+        val musicJson = runCatching { YouTubeMusicJson.search(query) }
+        if (musicJson.isSuccess && !musicJson.getOrNull().isNullOrEmpty()) {
+            return@withContext musicJson.getOrNull()!!
         }
-        if (music.isSuccess && !music.getOrNull().isNullOrEmpty()) {
-            return@withContext music.getOrNull()!!
-        }
-        music.exceptionOrNull()?.let { CrashHandler.logCaught("search/music-json", it) }
+        musicJson.exceptionOrNull()?.let { CrashHandler.logCaught("search/music-json", it) }
         // 2) Plain YouTube web search (HTML results page) — fallback.
         val web = runCatching {
             val extractor = service.getSearchExtractor(query)
