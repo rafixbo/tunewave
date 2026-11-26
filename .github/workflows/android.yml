@@ -16,6 +16,9 @@ jobs:
   build-apk:
     name: Build release APK
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,9 +29,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # No setup-android action: it runs `sdkmanager tools`, a package
+      # Google removed, and fails the whole job. ubuntu-latest already
+      # ships the SDK at $ANDROID_HOME — install API 36 directly.
       - name: Install Android 36 SDK
         run: |
           yes | sdkmanager --licenses || true
