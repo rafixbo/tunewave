@@ -1,13 +1,37 @@
 # TuneWave v1 — Build Record
 
-**Date:** 2026-11-26, v1 delivered ~12:50, v2 delivered ~13:12 Dhaka
-**App:** TuneWave 1.0.0+2 · `com.rafixbo.tunewave` · versionCode 2
-**Repo:** https://github.com/rafixbo/tunewave (public) · HEAD `e78331c` (branch `main`)
-**APK (v2):** `~/workspace/your_files/tunewave-v2.apk` — 17,442,869 B, SHA-256 `efd994b60f3e6d1c8e733ba4556c343f2aedd6f849bec194abb8b08a47dbc46f`, signed (fresh CI debug keystore), CI run 45773036508 SUCCESS
-**APK (v1):** `~/workspace/your_files/tunewave-v1.apk` — 17,442,869 B, SHA-256 `1a073dbe831bf49189f9f3b6f5e5ef21665fdcea3790c7d1f80981891414b57c`, CI run 45770343664 SUCCESS
-**Source zip (v2):** `~/workspace/your_files/tunewave-v2-source.zip` (rebuilt from HEAD at delivery)
+**Date:** 2026-11-26, v1 delivered ~12:50, v2 ~13:12, v3 ~13:27 Dhaka
+**App:** TuneWave 1.0.0+3 · `com.rafixbo.tunewave` · versionCode 3
+**Repo:** https://github.com/rafixbo/tunewave (public) · HEAD `d8a5406` (branch `main`)
+**APK (v3):** `~/workspace/your_files/tunewave-v3.apk` — 17,442,869 B, SHA-256 `dd3cf4199268011c9147f635cd706cfa41ca6d5b66d1836ebce436d0a89ca526`, signed (fresh CI debug keystore), CI run 45774735983 SUCCESS
+**APK (v2):** `~/workspace/your_files/tunewave-v2.apk` — 17,442,869 B, SHA-256 `efd994b60f3e6d1c8e733ba4556c343f2aedd6f849bec194abb8b08a47dbc46f`, CI run 45773036508 SUCCESS
+**Source zip (v3):** `~/workspace/your_files/tunewave-v3-source.zip` (rebuilt from HEAD at delivery)
 
-## Status: v1.0.0+2 DELIVERED — CRASH CATCHER ADDED (v1 crashed on open on Rafi's phone)
+## Status: v1.0.0+3 DELIVERED — YOUTUBE MUSIC JSON SEARCH IS NOW PRIMARY
+
+Search returned nothing on Rafi's phone ("Search dilr kichu ashe nw").
+Culprits found (2026-11-26 ~13:19, verified against NewPipe 0.27.1 sources):
+1. Search used ONLY the plain YouTube web search extractor (HTML results
+   page) — empty/blocked in the region = no results, no fallback.
+2. Failures were swallowed silently ("No results found", no error shown).
+3. `addSearchHistory` ran inside the same try block AFTER results were set
+   — if it threw, the catch wiped good results to empty.
+Fix (commits 2c59750 + d8a5406, CI run 45774735983 green 4m20s):
+- search() now tries YouTube Music JSON search FIRST (music.youtube.com/
+  youtubei/v1/search, WEB_REMIX client, "music_songs" filter →
+  YoutubeMusicSearchExtractor), web HTML second, "$query music" third.
+  Each attempt's failure is logged via CrashHandler.
+- **JSON path verified live from the VM 2026-11-26:** POST to the Innertube
+  endpoint with a "saiyaraa" query returned HTTP 200, real songs (Saiyaara
+  — Faheem Abdullah) via musicResponsiveListItemRenderer. No API key needed.
+  (Consent cookie is NOT the cause — the extractor already sends the SOCS
+  cookie itself, verified in YoutubeParsingHelper.)
+- TuneWaveState: `_searchError` StateFlow + Retry button in SearchScreen;
+  history write moved to its own try/catch so it can never wipe results.
+- charts()/newReleases() benefit automatically (they call search()).
+**Rafi must UNINSTALL the previous build before installing v3** (debug cert
+changes every build). Bot delivery: intro + APK + source zip via
+@shikhorobot (send_tunewave_v3.py).
 
 v1 crashed when opened on Rafi's phone (no stack trace available — the
 reason the catcher exists). v2 adds CrashHandler everywhere (see below)
