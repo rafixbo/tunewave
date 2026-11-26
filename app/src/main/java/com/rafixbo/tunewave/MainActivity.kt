@@ -62,6 +62,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
+import com.rafixbo.tunewave.crash.CrashHandler
 import com.rafixbo.tunewave.playback.PlayerManager
 import com.rafixbo.tunewave.ui.screens.DeveloperScreen
 import com.rafixbo.tunewave.ui.screens.HomeScreen
@@ -83,9 +84,11 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            runCatching { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+                .onFailure { CrashHandler.logCaught("permission", it) }
         }
-        PlayerManager.connect(this)
+        runCatching { PlayerManager.connect(this) }
+            .onFailure { CrashHandler.logCaught("player-connect", it) }
         val app = application as TuneWaveApp
         val state = app.state
         setContent {

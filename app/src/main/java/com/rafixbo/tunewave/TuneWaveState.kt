@@ -24,7 +24,7 @@ class TuneWaveState(
     val downloader: TuneDownloader,
     val lyricsRepository: LyricsRepository,
 ) {
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(Dispatchers.Main + CrashHandler.coroutineHandler)
 
     // Home
     private val _homeLoading = MutableStateFlow(true)

@@ -16,6 +16,7 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.rafixbo.tunewave.crash.CrashHandler
 import com.rafixbo.tunewave.data.LocalStore
 import com.rafixbo.tunewave.data.YouTubeRepository
 import com.rafixbo.tunewave.model.AudioQuality
@@ -41,19 +42,25 @@ class PlayerService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val exo = ExoPlayer.Builder(this).build().apply {
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                true,
-            )
-            setHandleAudioBecomingNoisy(true)
-            setWakeMode(C.WAKE_MODE_LOCAL)
+        // A failed player/service must never kill the app on open: the
+        // controller future simply fails and the UI stays usable.
+        try {
+            val exo = ExoPlayer.Builder(this).build().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                        .build(),
+                    true,
+                )
+                setHandleAudioBecomingNoisy(true)
+                setWakeMode(C.WAKE_MODE_LOCAL)
+            }
+            player = exo
+            mediaSession = MediaSession.Builder(this, exo).build()
+        } catch (e: Exception) {
+            CrashHandler.logCaught("player-service", e)
         }
-        player = exo
-        mediaSession = MediaSession.Builder(this, exo).build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -72,7 +79,7 @@ class PlayerService : MediaSessionService() {
 
 /** App-wide player state + controls. The UI talks only to this object. */
 object PlayerManager {
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(Dispatchers.Main + CrashHandler.coroutineHandler)
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionJob: Job? = null
     private var sleepJob: Job? = null
@@ -118,13 +125,14 @@ object PlayerManager {
 
     fun connect(context: Context) {
         if (controllerFuture != null) return
-        val token = SessionToken(context, ComponentName(context, PlayerService::class.java))
-        val future = MediaController.Builder(context, token).buildAsync()
-        controllerFuture = future
-        future.addListener({
-            val controller = runCatching { future.get() }.getOrNull() ?: return@addListener
-            _controller.value = controller
-            controller.addListener(object : Player.Listener {
+        try {
+            val token = SessionToken(context, ComponentName(context, PlayerService::class.java))
+            val future = MediaController.Builder(context, token).buildAsync()
+            controllerFuture = future
+            future.addListener({
+                val controller = runCatching { future.get() }.getOrNull() ?: return@addListener
+                _controller.value = controller
+                controller.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     _isPlaying.value = playing
                 }
@@ -143,6 +151,9 @@ object PlayerManager {
             })
             startPositionPolling()
         }, MoreExecutors.directExecutor())
+        } catch (e: Exception) {
+            CrashHandler.logCaught("player-connect", e)
+        }
     }
 
     private fun startPositionPolling() {

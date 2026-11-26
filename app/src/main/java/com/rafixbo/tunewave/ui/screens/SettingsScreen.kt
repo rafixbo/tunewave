@@ -1,5 +1,6 @@
 package com.rafixbo.tunewave.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,10 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rafixbo.tunewave.BuildConfig
 import com.rafixbo.tunewave.TuneWaveState
+import com.rafixbo.tunewave.crash.CrashHandler
 import com.rafixbo.tunewave.model.AudioQuality
 import com.rafixbo.tunewave.ui.components.MoodChip
 
@@ -44,6 +48,10 @@ fun SettingsScreen(state: TuneWaveState, onOpenDeveloper: () -> Unit) {
     val downloadQuality by state.downloadQuality.collectAsState(initial = AudioQuality.HIGH)
     val themeMode by state.themeMode.collectAsState(initial = "DARK")
     var showClearCache by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var crashCount by remember { mutableStateOf(CrashHandler.listLogs().size) }
+    var showCrashLog by remember { mutableStateOf(false) }
+    var crashLogText by remember { mutableStateOf<String?>(null) }
 
     Column(
         Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
@@ -99,6 +107,51 @@ fun SettingsScreen(state: TuneWaveState, onOpenDeveloper: () -> Unit) {
         }
         Spacer(Modifier.height(20.dp))
 
+        SectionTitle("Crash logs")
+        Text(
+            if (crashCount == 0) {
+                "No crashes recorded on this device."
+            } else {
+                "$crashCount crash log(s) saved on this device. Share the latest one with the developer so the crash can be fixed."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row {
+            Button(
+                onClick = {
+                    crashLogText = CrashHandler.latestLogText()
+                    showCrashLog = true
+                },
+                enabled = crashCount > 0,
+                shape = RoundedCornerShape(20.dp),
+            ) { Text("View latest") }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    val text = CrashHandler.latestLogText() ?: return@Button
+                    runCatching {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "TuneWave crash log")
+                            putExtra(Intent.EXTRA_TEXT, text)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Share crash log"))
+                    }.onFailure { CrashHandler.logCaught("share-crash-log", it) }
+                },
+                enabled = crashCount > 0,
+                shape = RoundedCornerShape(20.dp),
+            ) { Text("Share") }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = { CrashHandler.clearLogs(); crashCount = 0 },
+                enabled = crashCount > 0,
+                shape = RoundedCornerShape(20.dp),
+            ) { Text("Clear") }
+        }
+        Spacer(Modifier.height(20.dp))
+
         SectionTitle("About")
         Text("TuneWave ${BuildConfig.VERSION_NAME}", fontWeight = FontWeight.SemiBold)
         Text("No ads. No login. No tracking. Music from YouTube, played your way.")
@@ -141,6 +194,21 @@ fun SettingsScreen(state: TuneWaveState, onOpenDeveloper: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { showClearCache = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    if (showCrashLog) {
+        AlertDialog(
+            onDismissRequest = { showCrashLog = false },
+            title = { Text("Latest crash log") },
+            text = {
+                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
+                    Text(crashLogText ?: "No crash log found.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCrashLog = false }) { Text("Close") }
             },
         )
     }
