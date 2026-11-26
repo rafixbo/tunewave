@@ -144,7 +144,7 @@ class YouTubeRepository {
             val streams: List<AudioStream> = runCatching { extractor.audioStreams }.getOrElse { emptyList() }
             val picked = pickStream(streams, quality) ?: return@withContext null
             ResolvedStream(
-                song = song.copy(title = title, artist = artist ?: song.artist, thumbnailUrl = thumb, durationSec = duration),
+                song = song.copy(title = title ?: song.title, artist = artist ?: song.artist, thumbnailUrl = thumb, durationSec = duration),
                 url = picked.url,
                 itag = picked.itag,
                 bitrate = picked.averageBitrate,

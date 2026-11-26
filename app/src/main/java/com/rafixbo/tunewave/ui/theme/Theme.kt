@@ -1,11 +1,14 @@
 package com.rafixbo.tunewave.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 /** TuneWave original branding — deep-space violet + pink + cyan shine.
  *  NOT YouTube Music / ACS branding: original colours, original name. */
@@ -48,15 +51,27 @@ private val LightScheme = lightColorScheme(
     surfaceVariant = Color(0xFFEDEDF4),
 )
 
-/** Material 3 Expressive theme (Android 16 style) — springy motion,
- *  big rounded shapes, emphasized type. Dark is the default TuneWave look. */
+/** Material 3 Expressive look on material3 1.4.0: the library's own
+ *  MaterialExpressiveTheme and MotionScheme.expressive() are INTERNAL
+ *  (verified in the 1.4.0 sources) and cannot be called from app code,
+ *  and no separate material3-expressive artifact exists (404 on Google
+ *  Maven). So TuneWave uses the public MaterialTheme — 1.4.0 components
+ *  already ship expressive defaults — with big rounded shapes. Dark is
+ *  the default TuneWave look. */
 @Composable
 fun TuneWaveTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    MaterialExpressiveTheme(
+    MaterialTheme(
         colorScheme = if (darkTheme) DarkScheme else LightScheme,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(8.dp),
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(16.dp),
+            large = RoundedCornerShape(24.dp),
+            extraLarge = RoundedCornerShape(32.dp),
+        ),
         content = content,
     )
 }
