@@ -1,0 +1,52 @@
+name: Build TuneWave APK
+
+# TuneWave v1 — Kotlin / Jetpack Compose / Material 3 Expressive.
+# Builds the RELEASE APK on GitHub-hosted runners (primary build route).
+# No keystore is committed: v1 ships the unsigned release APK as the
+# CI artifact (assembleRelease without a signingConfig). No secrets are
+# needed for this build — there is no backend, no API key, no login.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36 SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      # No gradlew / wrapper jar in the repo (connector push is text-only),
+      # so Gradle is installed by the setup-gradle action itself.
+      - name: Set up Gradle 8.12
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.12"
+
+      - name: Build release APK
+        run: gradle :app:assembleRelease --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunewave-v1-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error

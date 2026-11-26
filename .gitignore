@@ -1,0 +1,13 @@
+# TuneWave — local / build outputs (never commit these)
+*.iml
+.gradle
+/local.properties
+/build
+/app/build
+captures
+.externalNativeBuild
+.cxx
+local.properties
+*.keystore
+*.jks
+keystore.properties

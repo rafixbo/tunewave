@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- TuneWave round wave mark: violet disc, same wave bars.
+         Launcher masks this to a circle. -->
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,44h10v20h-10z" />
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M38,32h10v44h-10z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24h10v60h-10z" />
+    <path
+        android:fillColor="#EC4899"
+        android:pathData="M70,36h10v36h-10z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M86,48h10v12h-10z" />
+</vector>
