@@ -145,7 +145,7 @@ class YouTubeRepository {
             val picked = pickStream(streams, quality) ?: return@withContext null
             ResolvedStream(
                 song = song.copy(title = title ?: song.title, artist = artist ?: song.artist, thumbnailUrl = thumb, durationSec = duration),
-                url = picked.url,
+                url = picked.url ?: return@withContext null,
                 itag = picked.itag,
                 bitrate = picked.averageBitrate,
                 extension = if (picked.itag == 251 || picked.itag == 249 || picked.itag == 250) "opus" else "m4a",
