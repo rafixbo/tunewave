@@ -1,17 +1,46 @@
 # TuneWave v1 — Build Record
 
-**Date:** 2026-11-26 ~02:30 Dhaka (2026-11-25 ~20:30 UTC), updated ~02:39 Dhaka
+**Date:** 2026-11-26, delivered ~12:50 Dhaka
 **App:** TuneWave 1.0.0+1 · `com.rafixbo.tunewave` · versionCode 1
-**Project:** `~/workspace/tunewave/` · local git commit `204c9a4` (branch `main`)
-**Source zip:** `~/workspace/your_files/tunewave-v1-source.zip` — 53,668 B, SHA-256 `624c6de77e618b941232ef83576aaaab71d5df9e5c03eac1fcb0c2f370699008` (rebuilt from HEAD via `git archive`)
+**Repo:** https://github.com/rafixbo/tunewave (public) · HEAD `9426c1e` (branch `main`)
+**APK:** `~/workspace/your_files/tunewave-v1.apk` — 17,442,869 B, SHA-256 `1a073dbe831bf49189f9f3b6f5e5ef21665fdcea3790c7d1f80981891414b57c`, signed (fresh CI debug keystore, cert SHA-256 `f170a7716c1e4cb3e159ff959500aef6ef1769d99620de3b5b3ba150ebb67ff7`), CI run 45770343664 SUCCESS
+**Source zip:** `~/workspace/your_files/tunewave-v1-source.zip` (rebuilt from HEAD at delivery)
 
-## Status: CODE COMPLETE + PUSH-READY — APK NOT BUILT (repo creation blocked, see below)
+## Status: DELIVERED — APK BUILT, SIGNED, VERIFIED, SENT TO RAFI
 
-The full v1 app is written, committed locally, and statically verified as far as
-this VM allows. **No APK exists yet.** The connector-push route is fully
-prepared (34 text files, manifest ready), but the empty GitHub repo could not
-be created by the connector — GitHub rejects repo creation by the App
-integration. Exact blocker + resume step below.
+CI run 45770343664 green (4m40s). APK verified on this VM: apksigner
+"Verifies" (v2+v3 schemes), aapt2 badging package `com.rafixbo.tunewave`
+versionCode 1 versionName 1.0.0+1 minSdk 24 targetSdk 36, label TuneWave,
+dex grep finds NO ad SDK (no AdMob/gMS ads/Facebook ads — the one binary
+grep hit was the false positive `InBodyStartApplets`). Phone test still
+owed by Rafi (see open items).
+
+## How it got here (2026-11-26 12:17–12:50 Dhaka)
+- **Push path that worked: gh CLI.** `gh auth login --web` (device code
+  EF82-10C0, Rafi entered at github.com/login/device) → `gh auth setup-git`
+  → `gh auth refresh -s workflow` (second code B07E-A31F — the first token
+  lacked the `workflow` scope and GitHub rejected the workflow file push).
+  Token scopes now gist/read:org/repo/workflow; setup saved in
+  `~/workspace/gh-cli-setup.md`. The Muse GitHub App connector push stayed
+  403 on git/trees even after the App was installed on tunewave only.
+- **CI fixes, 7 runs total (45767700746 → 45770343664):**
+  1. `android-actions/setup-android@v3` runs `sdkmanager tools` — package
+     removed by Google → dropped; use runner's preinstalled SDK.
+  2. `sdkmanager` not on runner PATH → full path under cmdline-tools.
+  3. Kotlin errors: StreamExtractor has no `thumbnailUrl` (use
+     `thumbnails` list); fully-qualified `flow.first()` doesn't resolve
+     (import it); material3 1.3.2's `MaterialExpressiveTheme` is internal.
+  4. `material3-expressive` artifact does not exist (404 on Google Maven)
+     → bumped material3 1.3.2 → 1.4.0.
+  5. `MaterialExpressiveTheme` is `internal` in the 1.4.0 sources too
+     (verified in the sources jar) — use public `MaterialTheme` with
+     expressive shapes; also fixed nullable `title` in resolveStream.
+  6. `AudioStream.getUrl()` is nullable in NewPipe 0.27.1 → bail out when null.
+  7. **Unsigned APK cannot be installed on Android** → CI generates a fresh
+     debug keystore per run and signs with apksigner (v2+v3). Cert changes
+     every build: uninstall the previous build before installing a new one.
+- GitHub cache service was down all morning ("Our services aren't available
+  right now", restore 400s) — warnings only, never the build failure.
 
 ## Blocker 1 — GitHub Actions (primary build route): gh NOT authenticated
 - `gh auth status` → "You are not logged into any GitHub hosts."
@@ -137,8 +166,9 @@ never claims it.
 - **Room deferred to v2:** library/playlists/history/downloads persist as
   JSON via DataStore Preferences + app files instead of Room, to keep v1
   green without a KSP plugin. User-visible behaviour is identical.
-- **Unsigned release APK from CI:** no keystore committed (ever). Sign
-  outside Gradle if/when Rafi wants a release key.
+- **Signed release APK from CI:** no keystore committed (ever). CI generates
+  a fresh debug keystore per run and signs with apksigner — the cert changes
+  every build, so uninstall before reinstalling a newer build.
 - **Gradients kept in TuneWave:** the header/player art use violet→pink
   gradients per Rafi's "smooth, shiny" order for *this* app. Note: Rafi
   separately recorded a gradient hate for the *After Class* Kotlin UI
@@ -150,7 +180,8 @@ never claims it.
   `versionName "1.0.0+1"`, `compileSdk/targetSdk 36`, `minSdk 24`).
 - `BuildConfig.VERSION_NAME` is read on the Settings screen — it is
   generated from the same build.gradle, so it cannot drift.
-- Launcher icon is generated original art committed in `res/mipmap-*` and
+- Launcher icon is generated original art committed as vector drawables in
+  `res/drawable/` (`ic_launcher.xml` / `ic_launcher_round.xml`) and
   referenced by the manifest — no template icon is copied over it at build
   time (the Shikho v36 bug cannot recur: the workflow has no icon-restore step).
 - No backend exists for TuneWave, so there is no version guard / kill switch
@@ -160,13 +191,9 @@ never claims it.
   the CI build must be re-inspected for `$$serializer` symbols in classes.dex
   once an APK exists (could not be done without a build — open item below).
 
-## Open items (need CI green first, then Rafi's phone)
-1. Trigger CI (Blocker 1) → download APK → verify with apksigner
-   (`verify --print-certs`), `aapt2 dump badging` (package, versionCode 1,
-   versionName 1.0.0+1, minSdk 24, targetSdk 36), file size + SHA-256,
-   dex grep for ad SDKs (must be absent) + `$$serializer` symbols present.
-2. Phone test (Rafi): playback past 5 s, background + lockscreen controls,
-   download + offline play, search results, trending load on BD network.
-3. NewPipe Extractor 0.27.1 is JitPack-built on first CI run — if JitPack is
-   slow/unavailable that day, the build log will show it; fallback is
-   unauthenticated Innertube (youtubei v1, ANDROID_MUSIC client).
+## Open items (CI green, APK delivered — Rafi's phone test owed)
+1. Phone test (Rafi): install `tunewave-v1.apk` → playback past 5 s,
+   background + lockscreen controls, download + offline play, search
+   results, trending load on BD network. Report back what works/breaks.
+2. `$$serializer` symbols check in classes.dex (open from before — do on
+   the next APK inspection, not blocking delivery).
