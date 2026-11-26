@@ -1,5 +1,6 @@
 package com.rafixbo.tunewave.data
 
+import com.rafixbo.tunewave.crash.CrashHandler
 import com.rafixbo.tunewave.model.AudioQuality
 import com.rafixbo.tunewave.model.Song
 import kotlinx.coroutines.Dispatchers
@@ -90,13 +91,37 @@ class YouTubeRepository {
 
     suspend fun search(query: String): List<Song> = withContext(Dispatchers.IO) {
         ensureInit()
-        try {
+        // 1) Plain YouTube web search (HTML results page).
+        val web = runCatching {
             val extractor = service.getSearchExtractor(query)
             extractor.fetchPage()
             extractor.initialPage.items.mapNotNull { it.toSong() }
-        } catch (e: Exception) {
-            throw e
         }
+        if (web.isSuccess && !web.getOrNull().isNullOrEmpty()) {
+            return@withContext web.getOrNull()!!
+        }
+        web.exceptionOrNull()?.let { CrashHandler.logCaught("search/web", it) }
+        // 2) YouTube Music search — a completely different backend
+        // (music.youtube.com Innertube API, no HTML scraping). This is
+        // what a music app should use, and it works when the web results
+        // page comes back empty or blocked in the user's region. The
+        // "music_songs" content filter routes to YoutubeMusicSearchExtractor.
+        val music = runCatching {
+            val extractor = service.getSearchExtractor(query, listOf("music_songs"), "")
+            extractor.fetchPage()
+            extractor.initialPage.items.mapNotNull { it.toSong() }
+        }
+        if (music.isSuccess && !music.getOrNull().isNullOrEmpty()) {
+            return@withContext music.getOrNull()!!
+        }
+        music.exceptionOrNull()?.let { CrashHandler.logCaught("search/music", it) }
+        // 3) Last try: plain search with "music" appended.
+        runCatching {
+            val extractor = service.getSearchExtractor("$query music")
+            extractor.fetchPage()
+            extractor.initialPage.items.mapNotNull { it.toSong() }
+        }.onFailure { CrashHandler.logCaught("search/fallback", it) }
+            .getOrElse { emptyList() }
     }
 
     /** Trending Music from YouTube's default kiosk (Trending), with a

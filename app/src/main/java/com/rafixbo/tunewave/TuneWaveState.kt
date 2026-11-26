@@ -46,6 +46,8 @@ class TuneWaveState(
     val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
     private val _searchLoading = MutableStateFlow(false)
     val searchLoading: StateFlow<Boolean> = _searchLoading.asStateFlow()
+    private val _searchError = MutableStateFlow<String?>(null)
+    val searchError: StateFlow<String?> = _searchError.asStateFlow()
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
     private var searchJob: Job? = null
@@ -102,21 +104,36 @@ class TuneWaveState(
         if (q.isBlank()) {
             _searchResults.value = emptyList()
             _searchLoading.value = false
+            _searchError.value = null
             return
         }
         searchJob = scope.launch {
             delay(400) // debounce
             _searchLoading.value = true
+            _searchError.value = null
             try {
-                _searchResults.value = repository.search(q.trim())
-                localStore.addSearchHistory(q.trim())
-                refreshSearchHistory()
-            } catch (_: Exception) {
+                val results = repository.search(q.trim())
+                _searchResults.value = results
+                if (results.isEmpty()) {
+                    _searchError.value = "YouTube didn't return anything for this search. Check your connection and tap Retry."
+                }
+            } catch (e: Exception) {
+                CrashHandler.logCaught("search", e)
                 _searchResults.value = emptyList()
+                _searchError.value = "Search failed. Check your connection and tap Retry."
             } finally {
                 _searchLoading.value = false
             }
+            // Saving history must never wipe the results if it fails.
+            runCatching {
+                localStore.addSearchHistory(q.trim())
+                refreshSearchHistory()
+            }.onFailure { CrashHandler.logCaught("search-history", it) }
         }
+    }
+
+    fun retrySearch() {
+        setSearchQuery(_searchQuery.value)
     }
 
     fun refreshSearchHistory() {

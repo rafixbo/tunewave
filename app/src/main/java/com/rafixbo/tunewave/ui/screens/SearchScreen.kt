@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +55,7 @@ fun SearchScreen(
     val query by state.searchQuery.collectAsState()
     val results by state.searchResults.collectAsState()
     val loading by state.searchLoading.collectAsState()
+    val searchError by state.searchError.collectAsState()
     val history by state.searchHistory.collectAsState()
     val currentSong by PlayerManager.currentSong.collectAsState()
     val liked by state.liked.collectAsState()
@@ -133,6 +135,21 @@ fun SearchScreen(
             if (loading) {
                 Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
+                }
+            }
+            if (!loading && searchError != null) {
+                Column(
+                    Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        searchError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { state.retrySearch() }, shape = RoundedCornerShape(20.dp)) {
+                        Text("Retry")
+                    }
                 }
             }
             LazyColumn(
