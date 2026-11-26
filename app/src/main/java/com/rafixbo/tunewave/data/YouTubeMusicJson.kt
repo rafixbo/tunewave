@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -146,7 +147,7 @@ object YouTubeMusicJson {
             videoId = videoId,
             title = title,
             artist = artist,
-            thumbnailUrl = thumb,
+            thumbnailUrl = thumb ?: "",
             durationSec = durationSec,
             kind = "SONG",
         )
@@ -167,7 +168,7 @@ object YouTubeMusicJson {
             videoId = videoId,
             title = title,
             artist = artist,
-            thumbnailUrl = thumb,
+            thumbnailUrl = thumb ?: "",
             durationSec = durationSec,
             kind = "SONG",
         )
@@ -209,13 +210,13 @@ object YouTubeMusicJson {
     }
 
     /** "3:45" -> 225, "1:02:30" -> 3750, anything else -> 0. */
-    private fun durationToSeconds(text: String?): Int {
+    private fun durationToSeconds(text: String?): Long {
         if (text.isNullOrBlank()) return 0
         val parts = text.trim().split(":").mapNotNull { it.toIntOrNull() }
         return when (parts.size) {
-            2 -> parts[0] * 60 + parts[1]
-            3 -> parts[0] * 3600 + parts[1] * 60 + parts[2]
-            else -> 0
+            2 -> parts[0] * 60L + parts[1]
+            3 -> parts[0] * 3600L + parts[1] * 60L + parts[2]
+            else -> 0L
         }
     }
 }
