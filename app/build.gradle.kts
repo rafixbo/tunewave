@@ -62,8 +62,10 @@ android {
 
 dependencies {
     // Compose BOM 2025.05.01 (May 2025 era — Kotlin 2.1/2.2 metadata,
-    // safe with the 2.2.21 compiler) + Material 3 1.3.2 pinned for
-    // Material 3 Expressive (stable since 1.3.0).
+    // safe with the 2.2.21 compiler). Material 3 is pinned to 1.4.0,
+    // NOT the BOM's 1.3.2: MaterialExpressiveTheme is internal in 1.3.2
+    // and public/stable from 1.4.0. (There is NO separate
+    // material3-expressive artifact — verified 404 on Google Maven.)
     val composeBom = platform("androidx.compose:compose-bom:2025.05.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -76,10 +78,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.3.2")
-    // Material 3 Expressive theme is public only in the expressive
-    // artifact — material3 1.3.2's own MaterialExpressiveTheme is internal.
-    implementation("androidx.compose.material3:material3-expressive:1.0.0")
+    implementation("androidx.compose.material3:material3:1.4.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.9.0")
 
