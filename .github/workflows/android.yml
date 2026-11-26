@@ -34,8 +34,10 @@ jobs:
       # ships the SDK at $ANDROID_HOME — install API 36 directly.
       - name: Install Android 36 SDK
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       # No gradlew / wrapper jar in the repo (connector push is text-only),
       # so Gradle is installed by the setup-gradle action itself.
